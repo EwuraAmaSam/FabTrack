@@ -12,6 +12,7 @@ import Link from "next/link"
 import { getAllRequests, getPendingRequests } from "@/lib/api"
 import RequestCard from "@/components/request-card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+// import { getAllRequests, getPendingRequests } from "@/lib/api";
 
 export default function Dashboard() {
   const { user, isLoading: authLoading, isUsingMockData } = useAuth()
@@ -31,12 +32,14 @@ export default function Dashboard() {
       if (user) {
         try {
           setIsLoading(true)
-          const [allRequestsData, pendingRequestsData] = await Promise.all([getAllRequests(), getPendingRequests()])
+          const [allRequestsData, pendingRequestsData] = await Promise.all([
+            getAllRequests(),
+            getPendingRequests()
+          ])
           setRequests(allRequestsData)
           setPendingRequests(pendingRequestsData)
         } catch (error) {
           console.error("Error fetching requests:", error)
-          // Set empty arrays as fallback
           setRequests([])
           setPendingRequests([])
         } finally {
@@ -76,7 +79,7 @@ export default function Dashboard() {
           <p className="text-gray-600">Welcome back, {user.name}</p>
         </div>
 
-        {user.role === "student" && (
+        {user.role === "Student" && (
           <Link href="/borrow">
             <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" /> Request Equipment
@@ -140,7 +143,7 @@ export default function Dashboard() {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500">No requests found</p>
-              {user.role === "student" && (
+              {user.role === "Student" && (
                 <Link href="/borrow">
                   <Button variant="outline" className="mt-4">
                     Request Equipment
@@ -180,4 +183,3 @@ export default function Dashboard() {
     </div>
   )
 }
-

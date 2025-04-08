@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+const BASE_URL_API = process.env.NEXT_PUBLIC_BASE_URL_API;
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -22,63 +23,59 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  console.log("Form submitted");
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setShowDemoAlert(false)
 
     try {
-      // Send the email and password to the API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL_API}/api/auth/login`, {
+      // Direct API call if not using auth context
+      const response = await fetch(`${BASE_URL_API}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: email,
-          password: password,
+          email,
+          password
         }),
       })
 
-      // Handle API errors
-      if (!response.ok) {
-        throw new Error("Login failed")
-      }
-
-      // Process the response, assuming the API returns a user object and token on successful login
       const data = await response.json()
-      console.log("API response:", data);
 
-      if (data && data.token) {
-        // Store the token and user data in localStorage
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('user_data', JSON.stringify(data.user))
-
-        toast({
-          title: "Login successful",
-          description: "You have been logged in successfully.",
-        })
-
-        // Check if we're using mock data
-        if (localStorage.getItem("fabtrack_using_mock") === "true") {
-          setShowDemoAlert(true)
-          setTimeout(() => {
-            // Ensure the user is routed to '/borrow' after the delay
-            router.push("/dashboard")
-          }, 2000) // 2 seconds delay
-        } else {
-          // Directly route to the borrow page if no mock data is being used
-          router.push("/dashboard")
-          console.log("Routing to dashboard");
-        }
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed")
       }
+
+      // Store token in localStorage
+      localStorage.setItem("authToken", data.token)
+      
+      // If using auth context, update the state
+      if (login) {
+        await login(email, password) // Pass token if your context needs it
+      }
+
+      toast({
+        title: "Login successful",
+        description: "Redirecting to dashboard page...",
+      })
+
+      // Redirect to dashboard page (or handle mock data case)
+      if (localStorage.getItem("fabtrack_using_mock") === "true") {
+        setShowDemoAlert(true)
+        setTimeout(() => {
+          router.push("/dashboard")
+        }, 2000)
+      } else {
+        router.push("/dashboard")
+      }
+
     } catch (error) {
       console.error("Login error:", error)
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Invalid credentials. Please try again.",
       })
     } finally {
       setIsLoading(false)
@@ -112,6 +109,8 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                pattern=".+@ashesi\.edu\.gh"
+                title="Please use your Ashesi email"
               />
             </div>
             <div className="space-y-2">
@@ -127,6 +126,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength="8"
               />
             </div>
           </CardContent>
@@ -134,7 +134,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...
                 </>
               ) : (
                 "Login"

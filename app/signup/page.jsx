@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2 } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 
-const BASE_URL_API = process.env.NEXT_PUBLIC_BASE_URL_API
-console.log('BASE_URL_API:', BASE_URL_API);
+const BASE_URL_API = process.env.NEXT_PUBLIC_BASE_URL_API;
+
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -20,31 +20,33 @@ export default function SignupPage() {
     confirmPassword: "",
     major: "",
     yearGroup: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
+    // Validation
     if (formData.password !== formData.confirmPassword) {
       toast({
         variant: "destructive",
         title: "Passwords do not match",
         description: "Please make sure your passwords match.",
-      })
-      return
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
+      // 1. Sign Up Request
       const response = await fetch(`${BASE_URL_API}/api/auth/signup`, {
         method: "POST",
         headers: {
@@ -54,37 +56,39 @@ export default function SignupPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: "Student", // Pass role as "Student" by default
+          role: "Student",
           major: formData.major,
           yearGroup: formData.yearGroup,
+          // Role is automatically set to "Student" by backend
         }),
-      })
+      });
 
-      // Log response details for debugging
-    const responseData = await response.json();
-    console.log('Response Data:', responseData);
-
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error("Registration failed")
+        throw new Error(data.message || "Registration failed");
       }
 
+      // 2. Handle successful registration
       toast({
-        title: "Account created",
-        description: "Your account has been created successfully. Please log in.",
-      })
+        title: "Account created successfully!",
+        description: "Please login with your credentials.",
+      });
 
-      router.push("/login")
+      // Redirect to login page
+      router.push("/login");
+
     } catch (error) {
-      console.error("Registration error:", error)
+      console.error("Registration error:", error);
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: "Please try again later.",
-      })
+        description: error.message || "Please check your details and try again.",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)] py-8">
@@ -117,6 +121,8 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                pattern=".+@ashesi\.edu\.gh"
+                title="Please use your Ashesi email"
               />
             </div>
 
@@ -137,10 +143,13 @@ export default function SignupPage() {
               <Input
                 id="yearGroup"
                 name="yearGroup"
+                type="number"
                 placeholder="2025"
                 value={formData.yearGroup}
                 onChange={handleChange}
                 required
+                min="2000"
+                max="2100"
               />
             </div>
 
@@ -153,6 +162,7 @@ export default function SignupPage() {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                minLength="8"
               />
             </div>
 
@@ -172,7 +182,7 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...
                 </>
               ) : (
                 "Create account"
@@ -188,5 +198,5 @@ export default function SignupPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,228 +1,255 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/context/auth-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Search, X } from "lucide-react"
-import { getEquipment, requestBorrow } from "@/lib/api"
-import Link from "next/link"
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, X } from "lucide-react";
+import Link from "next/link";
+
+const BASE_URL_API = process.env.NEXT_PUBLIC_BASE_URL_API;
+
+const sampleEquipment = [
+  {
+    id: 1,
+    // equipmentID: 1,
+    name: "Arduino Kit",
+    category: "Electronics",
+    available: true
+  },
+  {
+    id: 2,
+    // equipmentID: 2,
+    name: "3D Printer",
+    category: "Fabrication",
+    available: true
+  }
+];
 
 export default function BorrowPage() {
-  const { user, isLoading: authLoading } = useAuth()
-  const router = useRouter()
-  const { toast } = useToast()
-  const [equipment, setEquipment] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedItems, setSelectedItems] = useState([])
-  const [purpose, setPurpose] = useState("")
-  const [returnDate, setReturnDate] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [equipment, setEquipment] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [description, setDescription] = useState("");
+  const [collectionDateTime, setCollectionDateTime] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (authLoading) {
-      return // Don't proceed if the auth state is still loading
-    }
-
-    if (!user) {
-      router.push("/login") // Redirect to login if no user
-    } else if (user && user.role !== "student") {
-      router.push("/dashboard") // Redirect to dashboard if the user is not a student
-    }
-  }, [user, authLoading, router])
-
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        setIsLoading(true)
-        const data = await getEquipment()
-        setEquipment(data)
-      } catch (error) {
-        console.error("Error fetching equipment:", error)
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load equipment. Please try again.",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    if (user) {
-      fetchEquipment()
-    }
-  }, [user, toast])
-
-  const filteredEquipment = equipment.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+    if (!user || user.role !== "Student") return;
+    setEquipment(sampleEquipment);
+  }, [user]);
 
   const handleSelectItem = (item) => {
-    if (selectedItems.some((selected) => selected.id === item.id)) {
-      setSelectedItems(selectedItems.filter((selected) => selected.id !== item.id))
-    } else {
-      setSelectedItems([...selectedItems, item])
+    if (!item.available) {
+      toast({
+        title: "Unavailable",
+        description: `${item.name} is currently unavailable`,
+        variant: "destructive"
+      });
+      return;
     }
-  }
 
-  const handleRemoveItem = (itemId) => {
-    setSelectedItems(selectedItems.filter((item) => item.id !== itemId))
-  }
+    const isSelected = selectedItems.some(selected => selected.id === item.id);
+    
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+      setQuantities(prev => {
+        const newQuantities = { ...prev };
+        delete newQuantities[item.id];
+        return newQuantities;
+      });
+    } else {
+      setSelectedItems([...selectedItems, item]);
+      setQuantities(prev => ({ ...prev, [item.id]: 1 }));
+    }
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
+    e.preventDefault();
+    
     if (selectedItems.length === 0) {
       toast({
-        variant: "destructive",
         title: "No items selected",
-        description: "Please select at least one item to borrow.",
-      })
-      return
+        description: "Please select at least one item",
+        variant: "destructive"
+      });
+      return;
     }
 
-    if (!purpose.trim()) {
+    if (!collectionDateTime) {
       toast({
-        variant: "destructive",
-        title: "Purpose required",
-        description: "Please provide a purpose for borrowing these items.",
-      })
-      return
+        title: "Collection time required",
+        description: "Please select when you'll collect the equipment",
+        variant: "destructive"
+      });
+      return;
     }
 
-    if (!returnDate) {
-      toast({
-        variant: "destructive",
-        title: "Return date required",
-        description: "Please specify when you plan to return the items.",
-      })
-      return
-    }
-
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      await requestBorrow({
-        items: selectedItems.map((item) => item.id),
-        purpose,
-        returnDate,
-      })
+      const requestData = {
+        items: selectedItems.map(item => ({
+          equipmentID: item.id,
+          quantity: quantities[item.id] || 1,
+          description: description
+        })),
+        collectionDateTime: new Date(collectionDateTime).toISOString()
+      };
 
+      const response = await fetch(`${BASE_URL_API}/api/borrow/request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit request");
+      }
+      
       toast({
-        title: "Request submitted",
-        description: "Your equipment request has been submitted successfully.",
-      })
+        title: "Success!",
+        description: "Borrow request submitted successfully"
+      });
 
-      router.push("/dashboard")
+      // Reset form
+      setSelectedItems([]);
+      setQuantities({});
+      setDescription("");
+      setCollectionDateTime("");
+
+      // Redirect to dashboard after successful submission
+      router.push("/dashboard");
+
     } catch (error) {
+      console.error("Borrow request error:", error);
       toast({
-        variant: "destructive",
-        title: "Request failed",
-        description: error.message || "There was an error submitting your request.",
-      })
+        title: "Error",
+        description: error.message || "Failed to submit request",
+        variant: "destructive"
+      });
+
+      // Handle unauthorized error
+      if (error.message.includes("Unauthorized")) {
+        localStorage.removeItem('authToken');
+        router.push("/login");
+      }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   if (authLoading || !user) {
-    return (
-      <div className="container mx-auto py-8 flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <div className="flex justify-center p-8">
+      <Loader2 className="animate-spin" />
+    </div>;
   }
 
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Link href="/dashboard" className="text-primary hover:underline mb-4 inline-block">
-          &larr; Back to Dashboard
+        <Link href="/dashboard" className="text-primary hover:underline">
+          ← Back to Dashboard
         </Link>
-        <h1 className="text-3xl font-bold">Request Equipment</h1>
-        <p className="text-gray-600">Select the items you need for your project</p>
+        <h1 className="text-2xl font-bold mt-4">Borrow Equipment</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Equipment List */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Available Equipment</CardTitle>
-              <CardDescription>Browse and select items to borrow</CardDescription>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search equipment..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
             </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <CardContent className="space-y-4">
+              {equipment.map(item => (
+                <div 
+                  key={item.id}
+                  className={`flex items-center p-4 border rounded-md ${
+                    item.available 
+                      ? "hover:bg-gray-50 cursor-pointer" 
+                      : "opacity-60 cursor-not-allowed"
+                  }`}
+                  onClick={() => handleSelectItem(item)}
+                >
+                  <Checkbox
+                    checked={selectedItems.some(selected => selected.id === item.id)}
+                    disabled={!item.available}
+                    className="mr-4"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-gray-500">{item.category}</p>
+                  </div>
+                  <Badge variant={item.available ? "default" : "destructive"}>
+                    {item.available ? "Available" : "Unavailable"}
+                  </Badge>
                 </div>
-              ) : filteredEquipment.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredEquipment.map((item) => (
-                    <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-md hover:bg-gray-50">
-                      <Checkbox
-                        id={`item-${item.id}`}
-                        checked={selectedItems.some((selected) => selected.id === item.id)}
-                        onCheckedChange={() => handleSelectItem(item)}
-                      />
-                      <div className="flex-1">
-                        <label htmlFor={`item-${item.id}`} className="font-medium cursor-pointer">
-                          {item.name}
-                        </label>
-                        <p className="text-sm text-gray-500">{item.category}</p>
-                      </div>
-                      <Badge variant={item.available ? "success" : "destructive"}>
-                        {item.available ? "Available" : "Unavailable"}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No equipment found</p>
-                </div>
-              )}
+              ))}
             </CardContent>
           </Card>
         </div>
 
+        {/* Request Summary */}
         <div>
           <Card>
             <CardHeader>
               <CardTitle>Your Request</CardTitle>
-              <CardDescription>Selected items and request details</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Selected Items */}
                 <div>
                   <Label>Selected Items ({selectedItems.length})</Label>
                   {selectedItems.length > 0 ? (
-                    <div className="mt-2 space-y-2">
-                      {selectedItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
-                          <span className="text-sm">{item.name}</span>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)}>
-                            <X className="h-4 w-4" />
-                          </Button>
+                    <div className="mt-2 space-y-3">
+                      {selectedItems.map(item => (
+                        <div key={item.id} className="border p-3 rounded-md">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-xs text-gray-500">ID: {item.equipmentID}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectItem(item)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="mt-2 flex items-center">
+                            <Label htmlFor={`qty-${item.id}`} className="mr-2">Qty:</Label>
+                            <Input
+                              id={`qty-${item.id}`}
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={quantities[item.id] || 1}
+                              onChange={(e) => 
+                                setQuantities(prev => ({
+                                  ...prev,
+                                  [item.id]: parseInt(e.target.value) || 1
+                                }))
+                              }
+                              className="w-20"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -231,44 +258,49 @@ export default function BorrowPage() {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="purpose">Purpose</Label>
+                {/* Description */}
+                <div>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
-                    id="purpose"
-                    placeholder="Explain why you need these items..."
-                    value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Describe the exact component"
+                  />
+                </div>
+
+                {/* Collection Date */}
+                <div>
+                  <Label htmlFor="collectionDate">Collection Date/Time *</Label>
+                  <Input
+                    id="collectionDate"
+                    type="datetime-local"
+                    value={collectionDateTime}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setCollectionDateTime(e.target.value);
+                      }
+                    }}
+                    min={new Date().toISOString().slice(0, 16)}
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="returnDate">Expected Return Date</Label>
-                  <Input
-                    id="returnDate"
-                    type="date"
-                    value={returnDate}
-                    onChange={(e) => setReturnDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    required
-                  />
-                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isSubmitting || selectedItems.length === 0}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="animate-spin mr-2" />
+                  ) : null}
+                  Submit Request
+                </Button>
               </form>
             </CardContent>
-            <CardFooter>
-              <Button onClick={handleSubmit} className="w-full" disabled={selectedItems.length === 0 || isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting
-                  </>
-                ) : (
-                  "Submit Request"
-                )}
-              </Button>
-            </CardFooter>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }
