@@ -23,53 +23,149 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // const handleMockAdminLogin = () => {
+  //   // Set mock admin data in localStorage
+  //   localStorage.setItem("authToken", "mock-admin-token")
+  //   localStorage.setItem("userRole", "admin")
+  //   localStorage.setItem("fabtrack_using_mock", "true")
+    
+  //   // Set mock user in auth context if needed
+  //   if (login) {
+  //     login({
+  //       email: "mockadmin@ashesi.edu.gh",
+  //       role: "admin",
+  //       name: "Mock Admin",
+  //       isUsingMockData: true
+  //     })
+  //   }
+    
+  //   setShowDemoAlert(true)
+  //   toast({
+  //     title: "Mock Admin Login",
+  //     description: "Using demo admin dashboard with mock data",
+  //   })
+    
+  //   setTimeout(() => {
+  //     router.push("/admin")
+  //   }, 1500)
+  // }
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault()
+  //   setIsLoading(true)
+  //   setShowDemoAlert(false)
+
+  //      // Mock admin credentials check
+  //      if (email === "mockadmin@ashesi.edu.gh" && password === "mockpass123") {
+  //       handleMockAdminLogin()
+  //       setIsLoading(false)
+  //       return
+  //     }
+
+  //   try {
+  //     const response = await fetch(`${BASE_URL_API}/api/auth/login`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ email, password }),
+  //     })
+
+  //     const data = await response.json()
+
+  //     if (!response.ok) {
+  //       throw new Error(data.message || "Login failed")
+  //     }
+
+  //     // ✅ Store token and role
+  //     localStorage.setItem("authToken", data.token)
+  //     if (data.role) {
+  //       localStorage.setItem("userRole", data.role)
+  //     }
+
+  //     // ✅ Call auth context login if available
+  //     if (login) {
+  //       await login(email, password)
+  //     }
+
+  //     toast({
+  //       title: "Login successful",
+  //       description: "Redirecting to dashboard...",
+  //     })
+
+  //     // ✅ Handle mock/demo mode
+  //     if (localStorage.getItem("fabtrack_using_mock") === "true") {
+  //       setShowDemoAlert(true)
+  //       setTimeout(() => {
+  //         router.push("/dashboard")
+  //       }, 2000)
+  //     } else {
+  //       // ✅ Role-based redirect
+  //       if (data.role === "Admin") {
+  //         router.push("/admin")
+  //       } else {
+  //         router.push("/dashboard")
+  //       }
+  //     }
+
+  //   } catch (error) {
+  //     console.error("Login error:", error)
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Login failed",
+  //       description: error.message || "Invalid credentials. Please try again.",
+  //     })
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setShowDemoAlert(false)
-
+  
+    // Mock admin credentials check
+    if (email === "mockadmin@ashesi.edu.gh" && password === "mockpass123") {
+      handleMockAdminLogin()
+      setIsLoading(false)
+      return
+    }
+  
     try {
-      // Direct API call if not using auth context
       const response = await fetch(`${BASE_URL_API}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password
-        }),
+        body: JSON.stringify({ email, password }),
       })
-
+  
       const data = await response.json()
-
+  
       if (!response.ok) {
         throw new Error(data.message || "Login failed")
       }
-
-      // Store token in localStorage
+  
+      // ✅ Store token and role
       localStorage.setItem("authToken", data.token)
-      
-      // If using auth context, update the state
-      if (login) {
-        await login(email, password) // Pass token if your context needs it
+      if (data.role) {
+        localStorage.setItem("userRole", data.role)
       }
-
+  
+      // ✅ Call auth context login if available
+      if (login) {
+        await login(email, password)
+      }
+  
       toast({
         title: "Login successful",
-        description: "Redirecting to dashboard page...",
+        description: "Redirecting to dashboard...",
       })
-
-      // Redirect to dashboard page (or handle mock data case)
-      if (localStorage.getItem("fabtrack_using_mock") === "true") {
-        setShowDemoAlert(true)
-        setTimeout(() => {
-          router.push("/dashboard")
-        }, 2000)
-      } else {
-        router.push("/dashboard")
-      }
-
+  
+      // **Force redirection to the admin dashboard**
+      router.push("/dashboard") // This will direct everyone to the admin dashboard regardless of their role.
+  
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -81,6 +177,7 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
+  
 
   return (
     <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-4rem)] py-8">

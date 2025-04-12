@@ -12,7 +12,7 @@ import Link from "next/link"
 import { getAllRequests, getPendingRequests } from "@/lib/api"
 import RequestCard from "@/components/request-card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-// import { getAllRequests, getPendingRequests } from "@/lib/api";
+
 
 export default function Dashboard() {
   const { user, isLoading: authLoading, isUsingMockData } = useAuth()
