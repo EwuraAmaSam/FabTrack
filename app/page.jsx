@@ -30,9 +30,9 @@ export default function Home() {
             </div>
             <div className="md:w-1/2 flex justify-center">
               <img
-                src="/placeholder.svg?height=400&width=500"
+                src="/studentseng.png"
                 alt="Engineering equipment"
-                className="rounded-lg shadow-lg"
+                className="rounded-lg shadow-lg max-h-[400px] object-cover"
               />
             </div>
           </div>
