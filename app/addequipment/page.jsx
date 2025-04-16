@@ -1,4 +1,3 @@
-// app/admin/equipment/new/page.jsx
 "use client"
 
 import { useState } from "react"
@@ -21,28 +20,47 @@ export default function AddEquipmentPage() {
     if (!name.trim()) return
 
     setIsLoading(true)
-    try {
-      const response = await fetch('/api/equipments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          category: "General",
-          available: true,
-          quantity: 1
-        })
+
+    // Get the token from localStorage
+    const token = localStorage.getItem('authToken'); 
+
+    // If token doesn't exist, show error and stop loading
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No authentication token found. Please log in.",
       })
+      setIsLoading(false) // Stop loading state
+      return;
+    }
+
+    try {
+      // Make the POST request with the Authorization header
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL_API}/api/equipment`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`, // Add token here
+          },
+          body: JSON.stringify({ name: name.trim() }),
+        }
+      )
 
       if (!response.ok) {
         throw new Error("Failed to add equipment")
       }
 
+      const data = await response.json()
+
       toast({
         title: "Success",
         description: `${name} has been added to inventory`,
       })
+
+      // Redirect back to the equipment admin page after success
       router.push("/admin")
     } catch (error) {
       toast({
@@ -51,7 +69,7 @@ export default function AddEquipmentPage() {
         description: error.message || "Failed to add equipment",
       })
     } finally {
-      setIsLoading(false)
+      setIsLoading(false) // Stop loading state
     }
   }
 

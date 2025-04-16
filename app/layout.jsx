@@ -8,8 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
   title: "FabTrack - Ashesi University",
-  description: "Engineering Component Borrowing Platform for Ashesi University",
-    generator: 'v0.dev'
+  description: "Engineering Component Borrowing Platform for Ashesi University"
 }
 
 export default function RootLayout({ children }) {
@@ -25,7 +24,4 @@ export default function RootLayout({ children }) {
     </html>
   )
 }
-
-
-
 import './globals.css'

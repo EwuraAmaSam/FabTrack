@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -43,6 +43,15 @@ export default function SignupPage() {
       return;
     }
 
+    if (formData.password.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 8 characters long.",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -59,12 +68,11 @@ export default function SignupPage() {
           role: "Student",
           major: formData.major,
           yearGroup: formData.yearGroup,
-          // Role is automatically set to "Student" by backend
         }),
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || "Registration failed");
       }

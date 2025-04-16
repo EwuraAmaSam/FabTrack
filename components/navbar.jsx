@@ -51,15 +51,15 @@ export default function Navbar() {
             FabTrack
           </Link>
           <nav className="ml-8 hidden md:flex items-center space-x-6">
-            <Link
+            {/* <Link
               href="/"
               className={`text-sm ${
                 pathname === "/" ? "text-primary font-medium" : "text-gray-600 hover:text-primary"
               }`}
             >
               Home
-            </Link>
-            {user && (
+            </Link> */}
+            {/* {user && (
               <Link
                 href="/dashboard"
                 className={`text-sm ${
@@ -68,7 +68,7 @@ export default function Navbar() {
               >
                 Dashboard
               </Link>
-            )}
+            )} */}
             {user && user.role === "student" && (
               <Link
                 href="/borrow"
@@ -107,9 +107,9 @@ export default function Navbar() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
+                  {/* <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
